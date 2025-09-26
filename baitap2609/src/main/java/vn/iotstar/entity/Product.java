@@ -20,13 +20,14 @@ public class Product {
     private String description;
     private double price;
 
-    // Product thuộc về 1 User
+    
     @ManyToOne
-    @JoinColumn(name = "user_id")  // Hibernate sẽ tạo cột user_id
+    @JoinColumn(name = "user_id")  
     private User user;
 
-    // Product thuộc về 1 Category
+    
     @ManyToOne
-    @JoinColumn(name = "category_id") // Hibernate sẽ tạo cột category_id
+    @JoinColumn(name = "category_id") 
     private Category category;
 }
+
