@@ -1,139 +1,162 @@
 package vn.iotstar.resolver;
 
-import vn.iotstar.entity.Category;
-import vn.iotstar.entity.Product;
-import vn.iotstar.entity.User;
-import vn.iotstar.repository.CategoryRepository;
-import vn.iotstar.repository.ProductRepository;
-import vn.iotstar.repository.UserRepository;
+import vn.iotstar.entity.*;
+import vn.iotstar.dto.*;
+import vn.iotstar.repository.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.graphql.data.method.annotation.Argument;
-import org.springframework.graphql.data.method.annotation.MutationMapping;
-import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.*;
 import org.springframework.stereotype.Controller;
 
-import java.util.List;
+import java.math.BigDecimal;
+import java.util.*;
+import jakarta.validation.Valid;
 
 @Controller
 public class GraphQLResolver {
+    @Autowired private ProductRepository productRepo;
+    @Autowired private CategoryRepository categoryRepo;
+    @Autowired private UserRepository userRepo;
 
-	@Autowired
-	private ProductRepository productRepo;
-	@Autowired
-	private UserRepository userRepo;
-	@Autowired
-	private CategoryRepository categoryRepo;
+    /* ================== QUERY ================== */
+    @QueryMapping
+    public List<Product> productsSortedByPrice() {
+        return productRepo.findAllByOrderByPriceAsc();
+    }
 
-	// =========================
-	// Query
-	// =========================
-	@QueryMapping
-	public List<Product> getAllProductsByPrice() {
-		return productRepo.findAllByOrderByPriceAsc();
-	}
+    @QueryMapping
+    public List<Product> productsByCategory(@Argument Long categoryId) {
+        return productRepo.findDistinctByCategories_Id(categoryId);
+    }
 
-	@QueryMapping
-	public List<Product> getProductsByCategory(@Argument Long categoryId) {
-	    Category c = categoryRepo.findById(categoryId).orElseThrow();
-	    return c.getProducts(); // Lấy trực tiếp products của category
-	}
+    @QueryMapping
+    public List<User> users() { return userRepo.findAll(); }
 
+    @QueryMapping
+    public List<Category> categories() { return categoryRepo.findAll(); }
 
-	@QueryMapping
-	public List<User> getUsers() {
-		return userRepo.findAll();
-	}
+    @QueryMapping
+    public List<Product> products() { return productRepo.findAll(); }
 
-	@QueryMapping
-	public List<Category> getCategories() {
-		return categoryRepo.findAll();
-	}
+    @QueryMapping
+    public User user(@Argument Long id) { return userRepo.findById(id).orElse(null); }
 
-	// =========================
-	// Mutation - User
-	// =========================
-	@MutationMapping
-	public User createUser(@Argument String fullname, @Argument String email, @Argument String password,
-			@Argument String phone) {
-		return userRepo.save(User.builder().fullname(fullname).email(email).password(password).phone(phone).build());
-	}
+    @QueryMapping
+    public Category category(@Argument Long id) { return categoryRepo.findById(id).orElse(null); }
 
-	@MutationMapping
-	public User updateUser(@Argument Long id, @Argument String fullname, @Argument String email,
-			@Argument String password, @Argument String phone) {
-		User u = userRepo.findById(id).orElseThrow();
-		if (fullname != null)
-			u.setFullname(fullname);
-		if (email != null)
-			u.setEmail(email);
-		if (password != null)
-			u.setPassword(password);
-		if (phone != null)
-			u.setPhone(phone);
-		return userRepo.save(u);
-	}
+    @QueryMapping
+    public Product product(@Argument Long id) { return productRepo.findById(id).orElse(null); }
 
-	@MutationMapping
-	public Boolean deleteUser(@Argument Long id) {
-		userRepo.deleteById(id);
-		return true;
-	}
+    /* ================== MUTATION ================== */
+    @MutationMapping
+    public User createUser(@Argument @Valid UserInput input) {
+        User u = User.builder()
+                .fullname(input.getFullname())
+                .email(input.getEmail())
+                .password(input.getPassword())
+                .phone(input.getPhone())
+                .role(input.getRole() != null ? input.getRole() : "USER")
+                .build();
+        return userRepo.save(u);
+    }
 
-	// =========================
-	// Mutation - Category
-	// =========================
-	@MutationMapping
-	public Category createCategory(@Argument String name, @Argument String images) {
-		return categoryRepo.save(Category.builder().name(name).images(images).build());
-	}
+    @MutationMapping
+    public User updateUser(@Argument Long id, @Argument @Valid UserInput input) {
+        return userRepo.findById(id).map(u -> {
+            u.setFullname(input.getFullname());
+            u.setEmail(input.getEmail());
+            u.setPassword(input.getPassword());
+            u.setPhone(input.getPhone());
+            u.setRole(input.getRole());
+            return userRepo.save(u);
+        }).orElse(null);
+    }
 
-	@MutationMapping
-	public Category updateCategory(@Argument Long id, @Argument String name, @Argument String images) {
-		Category c = categoryRepo.findById(id).orElseThrow();
-		if (name != null)
-			c.setName(name);
-		if (images != null)
-			c.setImages(images);
-		return categoryRepo.save(c);
-	}
+    @MutationMapping
+    public Boolean deleteUser(@Argument Long id) {
+        if(userRepo.existsById(id)) {
+            userRepo.deleteById(id);
+            return true;
+        }
+        return false;
+    }
 
-	@MutationMapping
-	public Boolean deleteCategory(@Argument Long id) {
-		categoryRepo.deleteById(id);
-		return true;
-	}
+    @MutationMapping
+    public Category createCategory(@Argument @Valid CategoryInput input) {
+        Category c = Category.builder()
+                .name(input.getName())
+                .images(input.getImages())
+                .build();
+        return categoryRepo.save(c);
+    }
 
-// =========================
-// Mutation - Product
-// =========================
-	@MutationMapping
-	public Product createProduct(@Argument String title, @Argument int quantity, @Argument String description,
-			@Argument double price, @Argument Long userId) {
-		User u = userRepo.findById(userId).orElseThrow();
-		Product p = Product.builder().title(title).quantity(quantity).description(description).price(price).user(u)
-				.build();
-		return productRepo.save(p);
-	}
+    @MutationMapping
+    public Category updateCategory(@Argument Long id, @Argument @Valid CategoryInput input) {
+        return categoryRepo.findById(id).map(c -> {
+            c.setName(input.getName());
+            c.setImages(input.getImages());
+            return categoryRepo.save(c);
+        }).orElse(null);
+    }
 
-	@MutationMapping
-	public Product updateProduct(@Argument Long id, @Argument String title, @Argument Integer quantity,
-			@Argument String description, @Argument Double price) {
-		Product p = productRepo.findById(id).orElseThrow();
-		if (title != null)
-			p.setTitle(title);
-		if (quantity != null)
-			p.setQuantity(quantity);
-		if (description != null)
-			p.setDescription(description);
-		if (price != null)
-			p.setPrice(price);
-		return productRepo.save(p);
-	}
+    @MutationMapping
+    public Boolean deleteCategory(@Argument Long id) {
+        if(categoryRepo.existsById(id)) {
+            categoryRepo.deleteById(id);
+            return true;
+        }
+        return false;
+    }
 
-	@MutationMapping
-	public Boolean deleteProduct(@Argument Long id) {
-		productRepo.deleteById(id);
-		return true;
-	}
+    @MutationMapping
+    public Product createProduct(@Argument @Valid ProductInput input) {
+        Product p = Product.builder()
+                .title(input.getTitle())
+                .quantity(input.getQuantity())
+                .description(input.getDescription())
+                .price(BigDecimal.valueOf(input.getPrice()))
+                .build();
+
+        if(input.getUserId()!=null) {
+            userRepo.findById(input.getUserId()).ifPresent(p::setUser);
+        }
+
+        if(input.getCategoryIds()!=null) {
+            Set<Category> cats = new HashSet<>();
+            input.getCategoryIds().forEach(cid ->
+                categoryRepo.findById(cid).ifPresent(cats::add));
+            p.setCategories(cats);
+        }
+
+        return productRepo.save(p);
+    }
+
+    @MutationMapping
+    public Product updateProduct(@Argument Long id, @Argument @Valid ProductInput input) {
+        return productRepo.findById(id).map(p -> {
+            p.setTitle(input.getTitle());
+            p.setQuantity(input.getQuantity());
+            p.setDescription(input.getDescription());
+            p.setPrice(BigDecimal.valueOf(input.getPrice()));
+            if(input.getUserId()!=null) {
+                userRepo.findById(input.getUserId()).ifPresent(p::setUser);
+            }
+            if(input.getCategoryIds()!=null) {
+                Set<Category> cats = new HashSet<>();
+                input.getCategoryIds().forEach(cid ->
+                    categoryRepo.findById(cid).ifPresent(cats::add));
+                p.setCategories(cats);
+            }
+            return productRepo.save(p);
+        }).orElse(null);
+    }
+
+    @MutationMapping
+    public Boolean deleteProduct(@Argument Long id) {
+        if(productRepo.existsById(id)) {
+            productRepo.deleteById(id);
+            return true;
+        }
+        return false;
+    }
 }

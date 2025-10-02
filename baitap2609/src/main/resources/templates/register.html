@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Đăng ký tài khoản</title>
+    <meta charset="UTF-8"/>
+</head>
+<body>
+<h2>Đăng ký tài khoản</h2>
+
+<form th:action="@{/register}" th:object="${userInput}" method="post">
+    <div>
+        <label>Họ và tên:</label>
+        <input type="text" th:field="*{fullname}"/>
+        <span th:if="${#fields.hasErrors('fullname')}" 
+              th:errors="*{fullname}"></span>
+    </div>
+
+    <div>
+        <label>Email:</label>
+        <input type="email" th:field="*{email}"/>
+        <span th:if="${#fields.hasErrors('email')}" 
+              th:errors="*{email}"></span>
+    </div>
+
+    <div>
+        <label>Mật khẩu:</label>
+        <input type="password" th:field="*{password}"/>
+        <span th:if="${#fields.hasErrors('password')}" 
+              th:errors="*{password}"></span>
+    </div>
+
+    <div>
+        <label>Số điện thoại:</label>
+        <input type="text" th:field="*{phone}"/>
+        <span th:if="${#fields.hasErrors('phone')}" 
+              th:errors="*{phone}"></span>
+    </div>
+
+    <div>
+        <label>Vai trò:</label>
+        <select th:field="*{role}">
+            <option value="USER">User</option>
+            <option value="ADMIN">Admin</option>
+        </select>
+    </div>
+
+    <button type="submit">Đăng ký</button>
+</form>
+
+<a href="/login">Quay lại đăng nhập</a>
+</body>
+</html>

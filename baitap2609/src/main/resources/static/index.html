@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Product</title>
+</head>
+<body>
+  <h2>Danh sách sản phẩm</h2>
+  <ul id="productList"></ul>
+
+  <script>
+    async function loadProducts() {
+      const query = `
+        query {
+          productsSortedByPrice {
+            id
+            title
+            price
+          }
+        }
+      `;
+      const response = await fetch("/graphql", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({query})
+      });
+      const result = await response.json();
+
+      let list = document.getElementById("productList");
+      list.innerHTML = "";
+      result.data.productsSortedByPrice.forEach(p => {
+        let li = document.createElement("li");
+        li.textContent = p.title + " - " + p.price + " USD";
+        list.appendChild(li);
+      });
+    }
+    loadProducts();
+  </script>
+</body>
+</html>
